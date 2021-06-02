@@ -8,7 +8,7 @@
         <img src="https://img.shields.io/badge/Github%20Page-Swagger--UI-informational" /></a>
  </p>
 
-![Redmine Swagger Example](.github/banner.png)
+![Redmine Swagger Example](./screenshots/swagger-github-page.png)
 
 ### Usage
 
@@ -16,7 +16,6 @@
 git clone https://github.com/Morpheus235/redmine-swagger-api
 ```
 #### OR
-
 ```shell
 https://morpheus235.github.io/redmine-swagger-api/swagger.yaml
 ```
