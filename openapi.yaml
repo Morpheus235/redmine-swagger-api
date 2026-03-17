@@ -1,0 +1,979 @@
+openapi: 3.0.3
+info:
+  title: Redmine REST API (Unofficial)
+  description: |
+    OpenAPI 3.0 specification mirroring the Redmine REST API wiki (https://www.redmine.org/projects/redmine/wiki/rest_api) as of 2026-03-17.
+    This spec targets JSON (primary) but notes XML support where applicable. Schemas, parameters, examples, and responses are provided for parity with the official docs.
+  version: "2026-03-17"
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: www.redmine.org
+        description: Redmine host
+security:
+  - ApiKeyHeader: []
+components:
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-Redmine-API-Key
+    BasicAuth:
+      type: http
+      scheme: basic
+  parameters:
+    offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+      description: Offset of the first object to retrieve
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+      description: Number of items to return (default 25, max 100)
+    include:
+      name: include
+      in: query
+      schema:
+        type: string
+      description: Comma-separated list of associations to include (e.g. journals,attachments,changesets)
+    nometa:
+      name: nometa
+      in: query
+      schema:
+        type: integer
+        enum: [0,1]
+      description: If 1, omit top-level metadata (total_count, limit, offset)
+    callback:
+      name: callback
+      in: query
+      schema:
+        type: string
+      description: JSONP callback name (if JSONP enabled in server settings)
+    q:
+      name: q
+      in: query
+      schema:
+        type: string
+      description: Search query
+    X-Redmine-Switch-User:
+      name: X-Redmine-Switch-User
+      in: header
+      schema:
+        type: string
+      description: Impersonate a user by login (admin-only). If login does not exist or is inactive, server commonly returns 412.
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: string
+    UploadToken:
+      type: object
+      properties:
+        token:
+          type: string
+      example:
+        token: "7167.ed1ccdb093229ca1bd0b043618d88743"
+    BasicListResponse:
+      type: object
+      properties:
+        total_count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        login:
+          type: string
+        firstname:
+          type: string
+        lastname:
+          type: string
+        mail:
+          type: string
+        api_key:
+          type: string
+      example:
+        id: 5
+        login: jsmith
+        firstname: John
+        lastname: Smith
+        mail: jsmith@example.com
+        api_key: "a1b2c3d4e5f6"
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        identifier:
+          type: string
+        description:
+          type: string
+        created_on:
+          type: string
+          format: date-time
+      example:
+        id: 1
+        name: Redmine
+        identifier: redmine
+        description: "The Redmine project"
+        created_on: "2008-03-02T10:33:20Z"
+    IssueCustomField:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        value:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        multiple:
+          type: boolean
+    Upload:
+      type: object
+      properties:
+        token:
+          type: string
+        filename:
+          type: string
+        content_type:
+          type: string
+        description:
+          type: string
+      example:
+        token: "7167.ed1ccdb093229ca1bd0b043618d88743"
+        filename: image.png
+        content_type: image/png
+        description: "Optional description"
+    Issue:
+      type: object
+      properties:
+        id:
+          type: integer
+        project:
+          $ref: '#/components/schemas/Project'
+        project_id:
+          type: integer
+        tracker:
+          $ref: '#/components/schemas/Tracker'
+        status:
+          $ref: '#/components/schemas/IssueStatus'
+        priority:
+          $ref: '#/components/schemas/Enumeration'
+        subject:
+          type: string
+        description:
+          type: string
+        start_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+        assigned_to:
+          $ref: '#/components/schemas/User'
+        assigned_to_id:
+          type: integer
+        author:
+          $ref: '#/components/schemas/User'
+        watchers:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        custom_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueCustomField'
+        uploads:
+          type: array
+          items:
+            $ref: '#/components/schemas/Upload'
+        created_on:
+          type: string
+          format: date-time
+        updated_on:
+          type: string
+          format: date-time
+      example:
+        id: 296
+        project_id: 1
+        tracker:
+          id: 1
+          name: Bug
+        status:
+          id: 3
+          name: Resolved
+        priority:
+          id: 4
+          name: High
+        subject: "Example issue"
+        description: "This is an example"
+        assigned_to_id: 5
+        author:
+          id: 2
+          login: sally
+        custom_fields:
+          - id: 1
+            name: "Affected version"
+            value: "1.0.1"
+    Tracker:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    IssueStatus:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    Enumeration:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    TimeEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        project:
+          $ref: '#/components/schemas/Project'
+        issue:
+          $ref: '#/components/schemas/Issue'
+        user:
+          $ref: '#/components/schemas/User'
+        hours:
+          type: number
+          format: float
+        comments:
+          type: string
+        spent_on:
+          type: string
+          format: date
+      example:
+        id: 123
+        project:
+          id: 1
+          name: Redmine
+        user:
+          id: 5
+          login: jsmith
+        hours: 2.5
+        comments: "Worked on bugfix"
+        spent_on: "2026-03-15"
+    News:
+      type: object
+      properties:
+        id:
+          type: integer
+        project:
+          $ref: '#/components/schemas/Project'
+        title:
+          type: string
+        summary:
+          type: string
+    Version:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        due_date:
+          type: string
+          format: date
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+        lastname:
+          type: string
+    CustomField:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        field_format:
+          type: string
+        multiple:
+          type: boolean
+    Query:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        filters:
+          type: array
+          items:
+            type: object
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        filesize:
+          type: integer
+        content_type:
+          type: string
+        created_on:
+          type: string
+          format: date-time
+    MyAccount:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+    Journal:
+      type: object
+      properties:
+        id:
+          type: integer
+        user:
+          $ref: '#/components/schemas/User'
+        notes:
+          type: string
+        created_on:
+          type: string
+          format: date-time
+  responses:
+    Unauthorized:
+      description: Authentication required
+paths:
+  /issues:
+    get:
+      summary: List issues
+      description: Retrieve a paginated list of issues. Supports filters via query params; include associations using include param.
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/nometa'
+      responses:
+        '200':
+          description: Issues list with metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issues:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Issue'
+                  total_count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+    post:
+      summary: Create an issue
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issue:
+                  type: object
+                  properties:
+                    project_id:
+                      type: integer
+                    subject:
+                      type: string
+                    description:
+                      type: string
+                    assigned_to_id:
+                      type: integer
+                    custom_fields:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          value:
+                            oneOf:
+                              - type: string
+                              - type: array
+                                items:
+                                  type: string
+                    uploads:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Upload'
+              required:
+                - issue
+      responses:
+        '201':
+          description: Issue created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue:
+                    $ref: '#/components/schemas/Issue'
+        '422':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /issues/{issue_id}:
+    parameters:
+      - name: issue_id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Get an issue
+      parameters:
+        - $ref: '#/components/parameters/include'
+      responses:
+        '200':
+          description: Issue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue:
+                    $ref: '#/components/schemas/Issue'
+    put:
+      summary: Update an issue
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issue:
+                  type: object
+                  properties:
+                    subject:
+                      type: string
+                    description:
+                      type: string
+                    assigned_to_id:
+                      type: integer
+                    custom_fields:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          value:
+                            oneOf:
+                              - type: string
+                              - type: array
+                                items:
+                                  type: string
+      responses:
+        '200':
+          description: Issue updated
+        '422':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Delete an issue
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      responses:
+        '204':
+          description: Issue deleted
+  /issues/{issue_id}/journals:
+    get:
+      summary: List journals for an issue
+      parameters:
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Journals list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  journals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Journal'
+  /projects:
+    get:
+      summary: List projects
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+    post:
+      summary: Create a project
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    identifier:
+                      type: string
+                    description:
+                      type: string
+      responses:
+        '201':
+          description: Project created
+  /projects/{project_id}:
+    parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get project
+      responses:
+        '200':
+          description: Project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project:
+                    $ref: '#/components/schemas/Project'
+    put:
+      summary: Update project
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+      responses:
+        '200':
+          description: Project updated
+    delete:
+      summary: Delete project
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      responses:
+        '204':
+          description: Project deleted
+  /users:
+    get:
+      summary: List users
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+    post:
+      summary: Create user
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    login:
+                      type: string
+                    firstname:
+                      type: string
+                    lastname:
+                      type: string
+                    mail:
+                      type: string
+      responses:
+        '201':
+          description: User created
+        '422':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /users/{user_id}:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Get user
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+    put:
+      summary: Update user
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    firstname:
+                      type: string
+                    lastname:
+                      type: string
+                    mail:
+                      type: string
+      responses:
+        '200':
+          description: User updated
+        '422':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Delete user
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      responses:
+        '204':
+          description: User deleted
+  /time_entries:
+    get:
+      summary: List time entries
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Time entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time_entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TimeEntry'
+    post:
+      summary: Create time entry
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                time_entry:
+                  type: object
+                  properties:
+                    project_id:
+                      type: integer
+                    issue_id:
+                      type: integer
+                    hours:
+                      type: number
+                      format: float
+                    comments:
+                      type: string
+      responses:
+        '201':
+          description: Time entry created
+  /uploads:
+    post:
+      summary: Upload a file and receive a token
+      description: |-
+        Upload using Content-Type: application/octet-stream. The POST body must contain the raw file bytes.
+        On success the server returns 201 and a token which can be used in issue creation (uploads array).
+      parameters:
+        - name: filename
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Name of the file being uploaded
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: Upload token returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload:
+                    $ref: '#/components/schemas/UploadToken'
+        '406':
+          description: Not acceptable (wrong Content-Type)
+        '422':
+          description: Too large or other upload error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /uploads/{token}:
+    get:
+      summary: Retrieve uploaded file metadata
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Upload metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload:
+                    $ref: '#/components/schemas/Upload'
+  /news:
+    get:
+      summary: List news
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: News list
+  /issue_relations:
+    get:
+      summary: List issue relations
+      responses:
+        '200':
+          description: Issue relations
+  /versions:
+    get:
+      summary: List versions
+      responses:
+        '200':
+          description: Versions
+  /wiki_pages:
+    get:
+      summary: List wiki pages
+      responses:
+        '200':
+          description: Wiki pages list
+  /queries:
+    get:
+      summary: List queries
+      responses:
+        '200':
+          description: Queries
+  /attachments:
+    get:
+      summary: List attachments
+      responses:
+        '200':
+          description: Attachments list
+  /issue_statuses:
+    get:
+      summary: List issue statuses
+      responses:
+        '200':
+          description: Issue statuses
+  /trackers:
+    get:
+      summary: List trackers
+      responses:
+        '200':
+          description: Trackers
+  /enumerations:
+    get:
+      summary: List enumerations (priorities, activities)
+      responses:
+        '200':
+          description: Enumerations
+  /issue_categories:
+    get:
+      summary: List issue categories
+      responses:
+        '200':
+          description: Issue categories
+  /roles:
+    get:
+      summary: List roles
+      responses:
+        '200':
+          description: Roles
+  /groups:
+    get:
+      summary: List groups
+      responses:
+        '200':
+          description: Groups
+  /custom_fields:
+    get:
+      summary: List custom fields
+      responses:
+        '200':
+          description: Custom fields
+  /search:
+    get:
+      summary: Search
+      parameters:
+        - $ref: '#/components/parameters/q'
+      responses:
+        '200':
+          description: Search results
+  /files:
+    get:
+      summary: List files
+      responses:
+        '200':
+          description: Files
+  /my/account:
+    get:
+      summary: Get currently authenticated account
+      security:
+        - ApiKeyHeader: []
+        - BasicAuth: []
+      responses:
+        '200':
+          description: My account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/MyAccount'
+  /journals:
+    get:
+      summary: List journals
+      responses:
+        '200':
+          description: Journals
